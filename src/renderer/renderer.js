@@ -6,18 +6,6 @@ let emojiSelectedIndex = 0;
 let filteredEmojis = [];
 let isFocusMode = false;
 
-// ===== Ritual Prompts =====
-const ritualPrompts = [
-  "What's on your mind?",
-  "What are you avoiding?",
-  "What would future-you thank you for?",
-  "What matters most right now?",
-  "What's one small thing you can do today?",
-  "What are you grateful for?",
-  "What's been weighing on you?",
-  "If you could change one thing, what would it be?"
-];
-
 // ===== Common Emojis =====
 const emojis = [
   // Smileys
@@ -56,7 +44,6 @@ const elements = {
   editor: document.getElementById('editor'),
   notesList: document.getElementById('notesList'),
   newNoteBtn: document.getElementById('newNoteBtn'),
-  ritualPrompt: document.getElementById('ritualPrompt'),
   timeWhisper: document.getElementById('timeWhisper'),
   charCount: document.getElementById('charCount'),
   emojiPicker: document.getElementById('emojiPicker'),
@@ -159,7 +146,6 @@ async function deleteNote() {
     } else {
       currentNoteId = null;
       elements.editor.value = '';
-      updateRitualPrompt();
     }
   }
 }
@@ -171,7 +157,6 @@ function selectNote(id) {
 
   if (note) {
     elements.editor.value = note.content;
-    updateRitualPrompt();
     updateTimeWhisper();
     updateCharCount();
     renderNotesList();
@@ -255,19 +240,6 @@ function formatDailyDate(dateStr) {
 }
 
 // ===== Ritual Prompt =====
-function updateRitualPrompt() {
-  const note = notes.find(n => n.id === currentNoteId);
-  const hasContent = note && note.content.trim().length > 0;
-
-  if (hasContent) {
-    elements.ritualPrompt.classList.add('hidden');
-  } else {
-    const randomPrompt = ritualPrompts[Math.floor(Math.random() * ritualPrompts.length)];
-    elements.ritualPrompt.textContent = randomPrompt;
-    elements.ritualPrompt.classList.remove('hidden');
-  }
-}
-
 // ===== Time Whisper =====
 function updateTimeWhisper() {
   const note = notes.find(n => n.id === currentNoteId);
@@ -631,7 +603,6 @@ function setupEventListeners() {
   // Editor events
   elements.editor.addEventListener('input', () => {
     debouncedSave();
-    updateRitualPrompt();
     updateCharCount();
   });
 

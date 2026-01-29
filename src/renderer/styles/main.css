@@ -381,23 +381,6 @@ body {
   margin: 0 4px;
 }
 
-.ritual-prompt {
-  position: absolute;
-  top: 76px;
-  left: 32px;
-  right: 32px;
-  font-size: 18px;
-  color: var(--text-muted);
-  font-style: italic;
-  pointer-events: none;
-  transition: opacity var(--transition-normal);
-  z-index: 1;
-}
-
-.ritual-prompt.hidden {
-  opacity: 0;
-}
-
 .editor {
   flex: 1;
   background: transparent;
@@ -722,10 +705,6 @@ body {
 
 .focus-mode .format-toolbar {
   display: none;
-}
-
-.focus-mode .ritual-prompt {
-  top: 48px;
 }
 
 .focus-mode .editor-footer {
