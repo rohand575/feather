@@ -5,6 +5,7 @@ let saveTimeout = null;
 let emojiSelectedIndex = 0;
 let filteredEmojis = [];
 let isFocusMode = false;
+let searchQuery = '';
 
 // ===== Common Emojis =====
 const emojis = [
@@ -56,6 +57,8 @@ const elements = {
   helpModal: document.getElementById('helpModal'),
   closeHelp: document.getElementById('closeHelp'),
   formatToolbar: document.getElementById('formatToolbar'),
+  searchInput: document.getElementById('searchInput'),
+  themeToggle: document.getElementById('themeToggle'),
   minimizeBtn: document.getElementById('minimizeBtn'),
   maximizeBtn: document.getElementById('maximizeBtn'),
   closeBtn: document.getElementById('closeBtn'),
@@ -64,6 +67,9 @@ const elements = {
 
 // ===== Initialization =====
 async function init() {
+  // Load saved theme
+  loadTheme();
+
   await loadNotes();
   await ensureTodayNote();
   renderNotesList();
@@ -77,6 +83,19 @@ async function init() {
   } else if (notes.length > 0) {
     selectNote(notes[0].id);
   }
+}
+
+// ===== Theme =====
+function loadTheme() {
+  const savedTheme = localStorage.getItem('feather-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('feather-theme', newTheme);
 }
 
 // ===== Data Operations =====
@@ -103,7 +122,7 @@ async function createNote() {
 async function saveNote() {
   if (!currentNoteId) return;
 
-  const content = elements.editor.value;
+  const content = elements.editor.innerHTML;
   await window.feather.updateNote(currentNoteId, content);
 
   // Update local state
@@ -145,7 +164,7 @@ async function deleteNote() {
       selectNote(notes[0].id);
     } else {
       currentNoteId = null;
-      elements.editor.value = '';
+      elements.editor.innerHTML = '';
     }
   }
 }
@@ -156,7 +175,7 @@ function selectNote(id) {
   const note = notes.find(n => n.id === id);
 
   if (note) {
-    elements.editor.value = note.content;
+    elements.editor.innerHTML = note.content;
     updateTimeWhisper();
     updateCharCount();
     renderNotesList();
@@ -169,12 +188,30 @@ function renderNotesList() {
   const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
   const today = getTodayDateString();
 
-  if (notes.length === 0) {
-    elements.notesList.innerHTML = '<div class="notes-list-empty">No notes yet</div>';
+  // Filter notes based on search query
+  let filteredNotes = notes;
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase();
+    filteredNotes = notes.filter(note => {
+      const title = getNoteTitle(note).toLowerCase();
+      // Strip HTML and search in content
+      const temp = document.createElement('div');
+      temp.innerHTML = note.content;
+      const textContent = (temp.textContent || temp.innerText || '').toLowerCase();
+      return title.includes(query) || textContent.includes(query);
+    });
+  }
+
+  if (filteredNotes.length === 0) {
+    if (searchQuery.trim()) {
+      elements.notesList.innerHTML = '<div class="notes-list-empty">No matching notes</div>';
+    } else {
+      elements.notesList.innerHTML = '<div class="notes-list-empty">No notes yet</div>';
+    }
     return;
   }
 
-  elements.notesList.innerHTML = notes.map(note => {
+  elements.notesList.innerHTML = filteredNotes.map(note => {
     const title = getNoteTitle(note);
     const time = formatTimeWhisper(note.updatedAt);
     const isActive = note.id === currentNoteId;
@@ -229,8 +266,12 @@ function getNoteTitle(note) {
     return formatDailyDate(note.dailyDate);
   }
 
-  const firstLine = note.content.split('\n')[0].trim();
-  return firstLine || 'Untitled';
+  // Strip HTML tags and get first line
+  const temp = document.createElement('div');
+  temp.innerHTML = note.content;
+  const textContent = temp.textContent || temp.innerText || '';
+  const firstLine = textContent.split('\n')[0].trim();
+  return firstLine.substring(0, 50) || 'Untitled';
 }
 
 function formatDailyDate(dateStr) {
@@ -290,22 +331,25 @@ function formatTime(date) {
 
 // ===== Character Count =====
 function updateCharCount() {
-  const count = elements.editor.value.length;
+  const count = elements.editor.innerText.length;
   elements.charCount.textContent = `${count.toLocaleString()} characters`;
 }
 
 // ===== Emoji Picker =====
+let savedSelection = null;
+
 function showEmojiPicker() {
-  const selection = elements.editor.selectionStart;
+  // Save the current selection before opening picker
+  const sel = window.getSelection();
+  if (sel.rangeCount > 0) {
+    savedSelection = sel.getRangeAt(0).cloneRange();
+  }
+
   const rect = elements.editor.getBoundingClientRect();
 
-  // Calculate approximate position based on cursor
-  const lines = elements.editor.value.substring(0, selection).split('\n');
-  const lineHeight = 28; // Approximate line height
-  const charWidth = 10; // Approximate character width
-
-  let top = rect.top + (lines.length * lineHeight) + 30;
-  let left = rect.left + (lines[lines.length - 1].length * charWidth);
+  // Position near the center of the editor
+  let top = rect.top + 100;
+  let left = rect.left + (rect.width / 2) - 160;
 
   // Keep picker in viewport
   const pickerWidth = 320;
@@ -371,12 +415,17 @@ function filterEmojis(query) {
 }
 
 function insertEmoji(emoji) {
-  const start = elements.editor.selectionStart;
-  const end = elements.editor.selectionEnd;
-  const text = elements.editor.value;
+  elements.editor.focus();
 
-  elements.editor.value = text.substring(0, start) + emoji + text.substring(end);
-  elements.editor.selectionStart = elements.editor.selectionEnd = start + emoji.length;
+  // Restore the saved selection
+  if (savedSelection) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedSelection);
+  }
+
+  // Insert the emoji at cursor position
+  document.execCommand('insertText', false, emoji);
 
   hideEmojiPicker();
   debouncedSave();
@@ -431,154 +480,78 @@ function hideHelpModal() {
 
 // ===== Text Formatting =====
 function applyFormat(format) {
-  const editor = elements.editor;
-  const start = editor.selectionStart;
-  const end = editor.selectionEnd;
-  const text = editor.value;
-  const selectedText = text.substring(start, end);
-
-  let replacement = '';
-  let cursorOffset = 0;
-
-  // Get the start of the current line
-  const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-  const lineEnd = text.indexOf('\n', end);
-  const actualLineEnd = lineEnd === -1 ? text.length : lineEnd;
-  const currentLine = text.substring(lineStart, actualLineEnd);
+  elements.editor.focus();
 
   switch (format) {
     case 'bold':
-      if (selectedText) {
-        replacement = `**${selectedText}**`;
-      } else {
-        replacement = '****';
-        cursorOffset = -2;
-      }
+      document.execCommand('bold', false, null);
       break;
 
     case 'italic':
-      if (selectedText) {
-        replacement = `*${selectedText}*`;
-      } else {
-        replacement = '**';
-        cursorOffset = -1;
-      }
+      document.execCommand('italic', false, null);
       break;
 
     case 'strikethrough':
-      if (selectedText) {
-        replacement = `~~${selectedText}~~`;
-      } else {
-        replacement = '~~~~';
-        cursorOffset = -2;
-      }
+      document.execCommand('strikeThrough', false, null);
       break;
 
     case 'bullet':
-      // Apply to each selected line or current line
-      if (selectedText.includes('\n')) {
-        const lines = selectedText.split('\n');
-        replacement = lines.map(line => `- ${line}`).join('\n');
-      } else if (start === end) {
-        // No selection, add bullet at line start
-        const beforeLine = text.substring(0, lineStart);
-        const afterLine = text.substring(lineStart);
-        editor.value = beforeLine + '- ' + afterLine;
-        editor.selectionStart = editor.selectionEnd = start + 2;
-        debouncedSave();
-        updateCharCount();
-        return;
-      } else {
-        replacement = `- ${selectedText}`;
-      }
+      document.execCommand('insertUnorderedList', false, null);
       break;
 
     case 'numbered':
-      if (selectedText.includes('\n')) {
-        const lines = selectedText.split('\n');
-        replacement = lines.map((line, i) => `${i + 1}. ${line}`).join('\n');
-      } else if (start === end) {
-        const beforeLine = text.substring(0, lineStart);
-        const afterLine = text.substring(lineStart);
-        editor.value = beforeLine + '1. ' + afterLine;
-        editor.selectionStart = editor.selectionEnd = start + 3;
-        debouncedSave();
-        updateCharCount();
-        return;
-      } else {
-        replacement = `1. ${selectedText}`;
-      }
+      document.execCommand('insertOrderedList', false, null);
       break;
 
     case 'checkbox':
-      if (selectedText.includes('\n')) {
-        const lines = selectedText.split('\n');
-        replacement = lines.map(line => `- [ ] ${line}`).join('\n');
-      } else if (start === end) {
-        const beforeLine = text.substring(0, lineStart);
-        const afterLine = text.substring(lineStart);
-        editor.value = beforeLine + '- [ ] ' + afterLine;
-        editor.selectionStart = editor.selectionEnd = start + 6;
-        debouncedSave();
-        updateCharCount();
-        return;
-      } else {
-        replacement = `- [ ] ${selectedText}`;
-      }
+      // Insert a checkbox using HTML
+      const checkboxHtml = '<label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" style="width: 16px; height: 16px; cursor: pointer;"> </label>';
+      document.execCommand('insertHTML', false, checkboxHtml);
       break;
 
     case 'heading':
-      if (start === end) {
-        // Toggle heading on current line
-        const beforeLine = text.substring(0, lineStart);
-        const afterLine = text.substring(actualLineEnd);
-        let newLine = currentLine;
+      // Get the current block and toggle heading
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        let container = range.startContainer;
 
-        if (currentLine.startsWith('### ')) {
-          newLine = currentLine.substring(4);
-        } else if (currentLine.startsWith('## ')) {
-          newLine = '### ' + currentLine.substring(3);
-        } else if (currentLine.startsWith('# ')) {
-          newLine = '## ' + currentLine.substring(2);
-        } else {
-          newLine = '# ' + currentLine;
+        // Get the parent block element
+        while (container && container !== elements.editor && container.nodeType !== 1) {
+          container = container.parentNode;
         }
 
-        editor.value = beforeLine + newLine + afterLine;
-        editor.selectionStart = editor.selectionEnd = lineStart + newLine.length;
-        debouncedSave();
-        updateCharCount();
-        return;
-      } else {
-        replacement = `# ${selectedText}`;
+        if (container && container !== elements.editor) {
+          const tagName = container.tagName?.toLowerCase();
+          if (tagName === 'h1') {
+            document.execCommand('formatBlock', false, 'h2');
+          } else if (tagName === 'h2') {
+            document.execCommand('formatBlock', false, 'h3');
+          } else if (tagName === 'h3') {
+            document.execCommand('formatBlock', false, 'p');
+          } else {
+            document.execCommand('formatBlock', false, 'h1');
+          }
+        } else {
+          document.execCommand('formatBlock', false, 'h1');
+        }
       }
       break;
 
     case 'quote':
-      if (selectedText.includes('\n')) {
-        const lines = selectedText.split('\n');
-        replacement = lines.map(line => `> ${line}`).join('\n');
-      } else if (start === end) {
-        const beforeLine = text.substring(0, lineStart);
-        const afterLine = text.substring(lineStart);
-        editor.value = beforeLine + '> ' + afterLine;
-        editor.selectionStart = editor.selectionEnd = start + 2;
-        debouncedSave();
-        updateCharCount();
-        return;
-      } else {
-        replacement = `> ${selectedText}`;
-      }
+      document.execCommand('formatBlock', false, 'blockquote');
       break;
 
     case 'code':
-      if (selectedText.includes('\n')) {
-        replacement = '```\n' + selectedText + '\n```';
-      } else if (selectedText) {
-        replacement = '`' + selectedText + '`';
-      } else {
-        replacement = '``';
-        cursorOffset = -1;
+      // Wrap selection in code tag
+      const sel = window.getSelection();
+      if (sel.rangeCount > 0) {
+        const selectedText = sel.toString();
+        if (selectedText) {
+          document.execCommand('insertHTML', false, `<code>${escapeHtml(selectedText)}</code>`);
+        } else {
+          document.execCommand('insertHTML', false, '<code>&nbsp;</code>');
+        }
       }
       break;
 
@@ -586,14 +559,6 @@ function applyFormat(format) {
       return;
   }
 
-  // Apply the replacement
-  editor.value = text.substring(0, start) + replacement + text.substring(end);
-
-  // Set cursor position
-  const newPosition = start + replacement.length + cursorOffset;
-  editor.selectionStart = editor.selectionEnd = newPosition;
-
-  editor.focus();
   debouncedSave();
   updateCharCount();
 }
@@ -608,6 +573,15 @@ function setupEventListeners() {
 
   // New note button
   elements.newNoteBtn.addEventListener('click', createNote);
+
+  // Search input
+  elements.searchInput.addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    renderNotesList();
+  });
+
+  // Theme toggle
+  elements.themeToggle.addEventListener('click', toggleTheme);
 
   // Window controls
   elements.minimizeBtn.addEventListener('click', () => window.feather.minimize());

@@ -32,6 +32,30 @@
   --titlebar-height: 40px;
 }
 
+/* Light Mode */
+[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
+  --bg-hover: #dee2e6;
+  --bg-active: #ced4da;
+
+  --text-primary: #212529;
+  --text-secondary: #495057;
+  --text-tertiary: #6c757d;
+  --text-muted: #adb5bd;
+
+  --accent: #4a6ee0;
+  --accent-hover: #3a5ecc;
+  --accent-subtle: rgba(74, 110, 224, 0.1);
+
+  --danger: #dc3545;
+  --danger-hover: #c82333;
+
+  --border: #dee2e6;
+  --shadow: rgba(0, 0, 0, 0.1);
+}
+
 /* ===== Reset ===== */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -162,6 +186,41 @@ body {
   color: var(--text-tertiary);
 }
 
+/* ===== Search ===== */
+.search-container {
+  padding: 8px 12px;
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+}
+
 .sidebar-actions {
   display: flex;
   gap: 6px;
@@ -199,6 +258,19 @@ body {
 .icon-btn.new-note-btn:hover {
   background: var(--accent);
   color: white;
+}
+
+/* Theme toggle icons */
+.theme-icon-light {
+  display: none;
+}
+
+[data-theme="light"] .theme-icon-dark {
+  display: none;
+}
+
+[data-theme="light"] .theme-icon-light {
+  display: block;
 }
 
 /* ===== Notes List ===== */
@@ -392,10 +464,75 @@ body {
   line-height: 1.8;
   color: var(--text-primary);
   caret-color: var(--accent);
+  overflow-y: auto;
+  min-height: 200px;
 }
 
-.editor::placeholder {
+.editor:empty::before {
+  content: 'Start writing...';
   color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Editor formatting styles */
+.editor h1 {
+  font-size: 1.8em;
+  font-weight: 700;
+  margin: 0.5em 0;
+  color: var(--text-primary);
+}
+
+.editor h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 0.5em 0;
+  color: var(--text-primary);
+}
+
+.editor h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 0.5em 0;
+  color: var(--text-primary);
+}
+
+.editor blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 16px;
+  margin: 0.5em 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.editor code {
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.9em;
+  color: var(--accent);
+}
+
+.editor ul, .editor ol {
+  padding-left: 24px;
+  margin: 0.5em 0;
+}
+
+.editor li {
+  margin: 0.25em 0;
+}
+
+.editor b, .editor strong {
+  font-weight: 700;
+}
+
+.editor i, .editor em {
+  font-style: italic;
+}
+
+.editor s, .editor strike {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
 }
 
 .editor::-webkit-scrollbar {
