@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Feather Icon Generator</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 40px;
+      background: #1a1a1f;
+      color: #e8e8ec;
+    }
+    canvas {
+      border: 1px solid #333;
+      margin: 20px 0;
+    }
+    button {
+      padding: 12px 24px;
+      background: #7c9cff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    button:hover {
+      background: #9ab4ff;
+    }
+    .instructions {
+      margin-top: 30px;
+      padding: 20px;
+      background: #222228;
+      border-radius: 8px;
+    }
+    h1 { color: #7c9cff; }
+    a { color: #9ab4ff; }
+  </style>
+</head>
+<body>
+  <h1>Feather Icon Generator</h1>
+  <p>Generate app icons for Feather notepad</p>
+
+  <canvas id="canvas" width="256" height="256"></canvas>
+
+  <div>
+    <button onclick="download(256)">Download 256x256 PNG</button>
+    <button onclick="download(128)">Download 128x128 PNG</button>
+    <button onclick="download(64)">Download 64x64 PNG</button>
+    <button onclick="download(32)">Download 32x32 PNG</button>
+    <button onclick="download(16)">Download 16x16 PNG</button>
+  </div>
+
+  <div class="instructions">
+    <h3>Instructions for Windows ICO:</h3>
+    <ol>
+      <li>Download all sizes above</li>
+      <li>Go to <a href="https://convertico.com/" target="_blank">convertico.com</a> or <a href="https://icoconvert.com/" target="_blank">icoconvert.com</a></li>
+      <li>Upload all PNG files</li>
+      <li>Download the combined ICO file</li>
+      <li>Save as <code>src/assets/icon.ico</code></li>
+    </ol>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    function drawIcon(size) {
+      canvas.width = size;
+      canvas.height = size;
+
+      const scale = size / 256;
+
+      // Background gradient
+      const bgGrad = ctx.createLinearGradient(0, 0, size, size);
+      bgGrad.addColorStop(0, '#2a2a32');
+      bgGrad.addColorStop(1, '#1a1a1f');
+
+      // Draw background circle
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size * 0.47, 0, Math.PI * 2);
+      ctx.fillStyle = bgGrad;
+      ctx.fill();
+
+      // Feather gradient
+      const featherGrad = ctx.createLinearGradient(0, 0, size, size);
+      featherGrad.addColorStop(0, '#9ab4ff');
+      featherGrad.addColorStop(1, '#7c9cff');
+
+      ctx.save();
+      ctx.translate(size/2, size/2);
+      ctx.rotate(-Math.PI/4);
+      ctx.translate(-size * 0.35, -size * 0.08);
+
+      // Main feather body
+      ctx.beginPath();
+      ctx.moveTo(size * 0.44, size * 0.06);
+      ctx.quadraticCurveTo(size * 0.41, size * 0.12, size * 0.34, size * 0.22);
+      ctx.quadraticCurveTo(size * 0.28, size * 0.31, size * 0.22, size * 0.41);
+      ctx.quadraticCurveTo(size * 0.16, size * 0.50, size * 0.09, size * 0.59);
+      ctx.lineTo(size * 0.08, size * 0.62);
+      ctx.quadraticCurveTo(size * 0.12, size * 0.59, size * 0.19, size * 0.53);
+      ctx.quadraticCurveTo(size * 0.25, size * 0.47, size * 0.31, size * 0.37);
+      ctx.quadraticCurveTo(size * 0.37, size * 0.28, size * 0.42, size * 0.19);
+      ctx.quadraticCurveTo(size * 0.45, size * 0.12, size * 0.44, size * 0.06);
+      ctx.closePath();
+      ctx.fillStyle = featherGrad;
+      ctx.globalAlpha = 0.95;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Feather spine
+      ctx.beginPath();
+      ctx.moveTo(size * 0.44, size * 0.06);
+      ctx.quadraticCurveTo(size * 0.39, size * 0.19, size * 0.28, size * 0.34);
+      ctx.quadraticCurveTo(size * 0.19, size * 0.48, size * 0.08, size * 0.62);
+      ctx.strokeStyle = '#e8e8ec';
+      ctx.lineWidth = Math.max(1, 3 * scale);
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = 0.8;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Tip/nib
+      ctx.beginPath();
+      ctx.moveTo(size * 0.08, size * 0.62);
+      ctx.lineTo(size * 0.05, size * 0.69);
+      ctx.lineTo(size * 0.09, size * 0.64);
+      ctx.closePath();
+      ctx.fillStyle = '#e8e8ec';
+      ctx.globalAlpha = 0.9;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      ctx.restore();
+
+      return canvas.toDataURL('image/png');
+    }
+
+    function download(size) {
+      drawIcon(size);
+      const link = document.createElement('a');
+      link.download = `icon-${size}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Initial draw
+    drawIcon(256);
+  </script>
+</body>
+</html>
