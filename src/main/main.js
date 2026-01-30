@@ -1,4 +1,6 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, nativeImage } = require('electron');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 // Single instance lock - must be called early
@@ -199,5 +201,24 @@ function setupIpcHandlers() {
         mainWindow.setFullScreen(false);
       }
     }
+  });
+
+  // Download note to Desktop/Notes folder
+  ipcMain.handle('note:download', async (event, filename, content) => {
+    const desktopPath = path.join(os.homedir(), 'Desktop', 'Notes');
+
+    // Create Notes folder if it doesn't exist
+    if (!fs.existsSync(desktopPath)) {
+      fs.mkdirSync(desktopPath, { recursive: true });
+    }
+
+    // Sanitize filename
+    const sanitizedFilename = filename.replace(/[<>:"/\\|?*]/g, '_').substring(0, 100);
+    const filePath = path.join(desktopPath, `${sanitizedFilename}.txt`);
+
+    // Write file
+    fs.writeFileSync(filePath, content, 'utf8');
+
+    return { success: true, path: filePath };
   });
 }

@@ -62,7 +62,10 @@ const elements = {
   minimizeBtn: document.getElementById('minimizeBtn'),
   maximizeBtn: document.getElementById('maximizeBtn'),
   closeBtn: document.getElementById('closeBtn'),
-  sidebar: document.getElementById('sidebar')
+  sidebar: document.getElementById('sidebar'),
+  downloadBtn: document.getElementById('downloadBtn'),
+  toast: document.getElementById('toast'),
+  toastMessage: document.getElementById('toastMessage')
 };
 
 // ===== Initialization =====
@@ -583,6 +586,9 @@ function setupEventListeners() {
   // Theme toggle
   elements.themeToggle.addEventListener('click', toggleTheme);
 
+  // Download button
+  elements.downloadBtn.addEventListener('click', downloadNote);
+
   // Window controls
   elements.minimizeBtn.addEventListener('click', () => window.feather.minimize());
   elements.maximizeBtn.addEventListener('click', () => window.feather.maximize());
@@ -729,6 +735,47 @@ function setupKeyboardShortcuts() {
       }
     }
   });
+}
+
+// ===== Toast Notification =====
+let toastTimeout = null;
+
+function showToast(message) {
+  if (toastTimeout) {
+    clearTimeout(toastTimeout);
+  }
+
+  elements.toastMessage.textContent = message;
+  elements.toast.classList.add('visible');
+
+  toastTimeout = setTimeout(() => {
+    elements.toast.classList.remove('visible');
+  }, 3000);
+}
+
+// ===== Download Note =====
+async function downloadNote() {
+  if (!currentNoteId) return;
+
+  const note = notes.find(n => n.id === currentNoteId);
+  if (!note) return;
+
+  // Get plain text content (strip HTML)
+  const textContent = elements.editor.innerText;
+
+  // Generate filename from note title
+  const title = getNoteTitle(note);
+  const filename = title || 'Untitled';
+
+  try {
+    const result = await window.feather.downloadNote(filename, textContent);
+    if (result.success) {
+      showToast(`Saved to Desktop/Notes/${filename}.txt`);
+    }
+  } catch (err) {
+    console.error('Failed to download note:', err);
+    showToast('Failed to save note');
+  }
 }
 
 // ===== Utilities =====

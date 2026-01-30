@@ -14,5 +14,8 @@ contextBridge.exposeInMainWorld('feather', {
   minimize: () => ipcRenderer.send('window:minimize'),
   maximize: () => ipcRenderer.send('window:maximize'),
   close: () => ipcRenderer.send('window:close'),
-  toggleFocusMode: (enabled) => ipcRenderer.send('window:toggleFocusMode', enabled)
+  toggleFocusMode: (enabled) => ipcRenderer.send('window:toggleFocusMode', enabled),
+
+  // Download note
+  downloadNote: (filename, content) => ipcRenderer.invoke('note:download', filename, content)
 });
