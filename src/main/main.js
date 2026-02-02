@@ -1,7 +1,8 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, nativeImage, shell } = require('electron');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const AutoLaunch = require('auto-launch');
 
 // Single instance lock - must be called early
 const gotTheLock = app.requestSingleInstanceLock();
@@ -10,6 +11,13 @@ let mainWindow = null;
 let tray = null;
 let db = null;
 let isQuitting = false;
+
+// Auto-launch configuration
+const featherAutoLauncher = new AutoLaunch({
+  name: 'Feather',
+  path: app.getPath('exe'),
+  isHidden: true
+});
 
 // Disable hardware acceleration for faster startup
 app.disableHardwareAcceleration();
@@ -26,10 +34,20 @@ if (!gotTheLock) {
 }
 
 function initApp() {
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     // Initialize database after app is ready
     const Database = require('./database');
     db = new Database();
+
+    // Enable auto-launch on Windows startup
+    try {
+      const isEnabled = await featherAutoLauncher.isEnabled();
+      if (!isEnabled) {
+        await featherAutoLauncher.enable();
+      }
+    } catch (err) {
+      console.error('Auto-launch error:', err);
+    }
 
     setupIpcHandlers();
     createWindow();
@@ -220,5 +238,20 @@ function setupIpcHandlers() {
     fs.writeFileSync(filePath, content, 'utf8');
 
     return { success: true, path: filePath };
+  });
+
+  // Open external URL in system default browser
+  ipcMain.handle('shell:openExternal', async (event, url) => {
+    // Validate URL to prevent security issues
+    try {
+      const urlObj = new URL(url);
+      if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
+        await shell.openExternal(url);
+        return { success: true };
+      }
+    } catch (err) {
+      console.error('Invalid URL:', err);
+    }
+    return { success: false };
   });
 }

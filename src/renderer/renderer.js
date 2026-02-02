@@ -65,7 +65,8 @@ const elements = {
   sidebar: document.getElementById('sidebar'),
   downloadBtn: document.getElementById('downloadBtn'),
   toast: document.getElementById('toast'),
-  toastMessage: document.getElementById('toastMessage')
+  toastMessage: document.getElementById('toastMessage'),
+  tableContextMenu: document.getElementById('tableContextMenu')
 };
 
 // ===== Initialization =====
@@ -179,10 +180,39 @@ function selectNote(id) {
 
   if (note) {
     elements.editor.innerHTML = note.content;
+    ensureFirstLineTitle();
     updateTimeWhisper();
     updateCharCount();
     renderNotesList();
     elements.editor.focus();
+  }
+}
+
+// ===== First Line Title Handling =====
+function ensureFirstLineTitle() {
+  // If editor is empty or has no wrapped first element, wrap the first line
+  const firstChild = elements.editor.firstChild;
+
+  if (!firstChild) return;
+
+  // If first child is a text node with content, wrap it in a title div
+  if (firstChild.nodeType === Node.TEXT_NODE && firstChild.textContent.trim()) {
+    const text = firstChild.textContent;
+    const lines = text.split('\n');
+    const firstLine = lines[0];
+    const rest = lines.slice(1).join('\n');
+
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'first-line-title';
+    titleDiv.textContent = firstLine;
+
+    elements.editor.removeChild(firstChild);
+    elements.editor.insertBefore(titleDiv, elements.editor.firstChild);
+
+    if (rest) {
+      const restNode = document.createTextNode(rest);
+      titleDiv.after(restNode);
+    }
   }
 }
 
@@ -269,11 +299,31 @@ function getNoteTitle(note) {
     return formatDailyDate(note.dailyDate);
   }
 
-  // Strip HTML tags and get first line
+  // Parse HTML and get first line properly
   const temp = document.createElement('div');
   temp.innerHTML = note.content;
+
+  // Replace block elements with newlines to properly detect line breaks
+  const blockTags = ['div', 'p', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'tr', 'blockquote'];
+  blockTags.forEach(tag => {
+    temp.querySelectorAll(tag).forEach(el => {
+      el.insertAdjacentText('beforebegin', '\n');
+    });
+  });
+
   const textContent = temp.textContent || temp.innerText || '';
-  const firstLine = textContent.split('\n')[0].trim();
+
+  // Split by newlines and get the first non-empty line
+  const lines = textContent.split('\n');
+  let firstLine = '';
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed) {
+      firstLine = trimmed;
+      break;
+    }
+  }
+
   return firstLine.substring(0, 50) || 'Untitled';
 }
 
@@ -558,6 +608,17 @@ function applyFormat(format) {
       }
       break;
 
+    case 'table':
+      // Insert a 3x3 table
+      const tableHtml = `
+        <table class="note-table">
+          <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+          <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+          <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+        </table><br>`;
+      document.execCommand('insertHTML', false, tableHtml);
+      break;
+
     default:
       return;
   }
@@ -566,12 +627,247 @@ function applyFormat(format) {
   updateCharCount();
 }
 
+// ===== Paste Handler =====
+function handlePaste(e) {
+  e.preventDefault();
+
+  // Get plain text from clipboard
+  const text = e.clipboardData.getData('text/plain');
+
+  // Check if the text is a URL and convert to clickable link
+  const processedText = convertUrlsToLinks(text);
+
+  if (processedText !== text) {
+    // Insert as HTML if we have links
+    document.execCommand('insertHTML', false, processedText);
+  } else {
+    // Insert as plain text, preserving line breaks
+    document.execCommand('insertText', false, text);
+  }
+
+  debouncedSave();
+  updateCharCount();
+}
+
+// ===== URL Detection and Conversion =====
+function isValidUrl(string) {
+  try {
+    const url = new URL(string);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function getShortenedUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    let display = urlObj.hostname.replace(/^www\./, '');
+
+    // Add path if it's short enough
+    if (urlObj.pathname && urlObj.pathname !== '/') {
+      const path = urlObj.pathname;
+      if (path.length <= 20) {
+        display += path;
+      } else {
+        display += path.substring(0, 17) + '...';
+      }
+    }
+
+    // Truncate if still too long
+    if (display.length > 35) {
+      display = display.substring(0, 32) + '...';
+    }
+
+    return display;
+  } catch {
+    return url.length > 35 ? url.substring(0, 32) + '...' : url;
+  }
+}
+
+function convertUrlsToLinks(text) {
+  // URL regex pattern
+  const urlPattern = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/gi;
+
+  return text.replace(urlPattern, (url) => {
+    const shortUrl = getShortenedUrl(url);
+    return `<a href="${escapeHtml(url)}" class="note-link" title="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(shortUrl)}</a>`;
+  });
+}
+
+// ===== Table Context Menu =====
+let currentTableCell = null;
+
+function showTableContextMenu(e, cell) {
+  e.preventDefault();
+  currentTableCell = cell;
+
+  const menu = elements.tableContextMenu;
+  menu.style.left = `${e.clientX}px`;
+  menu.style.top = `${e.clientY}px`;
+  menu.classList.add('visible');
+
+  // Adjust position if menu goes off screen
+  const rect = menu.getBoundingClientRect();
+  if (rect.right > window.innerWidth) {
+    menu.style.left = `${window.innerWidth - rect.width - 10}px`;
+  }
+  if (rect.bottom > window.innerHeight) {
+    menu.style.top = `${window.innerHeight - rect.height - 10}px`;
+  }
+}
+
+function hideTableContextMenu() {
+  elements.tableContextMenu.classList.remove('visible');
+  currentTableCell = null;
+}
+
+function handleTableAction(action) {
+  if (!currentTableCell) return;
+
+  const table = currentTableCell.closest('table');
+  const row = currentTableCell.closest('tr');
+  if (!table || !row) return;
+
+  const rowIndex = Array.from(table.rows).indexOf(row);
+  const cellIndex = Array.from(row.cells).indexOf(currentTableCell);
+  const colCount = row.cells.length;
+
+  switch (action) {
+    case 'addRowAbove': {
+      const newRow = table.insertRow(rowIndex);
+      for (let i = 0; i < colCount; i++) {
+        const cell = newRow.insertCell(i);
+        cell.innerHTML = '&nbsp;';
+      }
+      break;
+    }
+    case 'addRowBelow': {
+      const newRow = table.insertRow(rowIndex + 1);
+      for (let i = 0; i < colCount; i++) {
+        const cell = newRow.insertCell(i);
+        cell.innerHTML = '&nbsp;';
+      }
+      break;
+    }
+    case 'addColLeft': {
+      for (const tableRow of table.rows) {
+        const cell = tableRow.insertCell(cellIndex);
+        cell.innerHTML = '&nbsp;';
+      }
+      break;
+    }
+    case 'addColRight': {
+      for (const tableRow of table.rows) {
+        const cell = tableRow.insertCell(cellIndex + 1);
+        cell.innerHTML = '&nbsp;';
+      }
+      break;
+    }
+    case 'deleteRow': {
+      if (table.rows.length > 1) {
+        table.deleteRow(rowIndex);
+      } else {
+        // If only one row, delete the whole table
+        table.remove();
+      }
+      break;
+    }
+    case 'deleteCol': {
+      if (colCount > 1) {
+        for (const tableRow of table.rows) {
+          tableRow.deleteCell(cellIndex);
+        }
+      } else {
+        // If only one column, delete the whole table
+        table.remove();
+      }
+      break;
+    }
+    case 'deleteTable': {
+      table.remove();
+      break;
+    }
+  }
+
+  hideTableContextMenu();
+  debouncedSave();
+}
+
 // ===== Event Listeners =====
 function setupEventListeners() {
+  // Paste event - convert to plain text
+  elements.editor.addEventListener('paste', handlePaste);
+
   // Editor events
   elements.editor.addEventListener('input', () => {
     debouncedSave();
     updateCharCount();
+  });
+
+  // Handle Enter key to wrap first line as title
+  elements.editor.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      const firstChild = elements.editor.firstChild;
+      // If typing in a plain text node as first child, wrap it as title
+      if (firstChild && firstChild.nodeType === Node.TEXT_NODE && firstChild.textContent.trim()) {
+        e.preventDefault();
+
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'first-line-title';
+        titleDiv.textContent = firstChild.textContent;
+
+        elements.editor.removeChild(firstChild);
+        elements.editor.insertBefore(titleDiv, elements.editor.firstChild);
+
+        // Add a new line after the title and place cursor there
+        const newLine = document.createElement('div');
+        newLine.innerHTML = '<br>';
+        titleDiv.after(newLine);
+
+        // Place cursor in the new line
+        const range = document.createRange();
+        const sel = window.getSelection();
+        range.setStart(newLine, 0);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        debouncedSave();
+      }
+    }
+  });
+
+  // Handle link clicks in editor
+  elements.editor.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (link && link.href) {
+      e.preventDefault();
+      // Open in system default browser
+      window.feather.openExternal(link.href);
+    }
+  });
+
+  // Handle right-click on table cells
+  elements.editor.addEventListener('contextmenu', (e) => {
+    const cell = e.target.closest('td');
+    if (cell && cell.closest('table')) {
+      showTableContextMenu(e, cell);
+    }
+  });
+
+  // Table context menu actions
+  elements.tableContextMenu.querySelectorAll('.context-menu-item').forEach(item => {
+    item.addEventListener('click', () => {
+      handleTableAction(item.dataset.action);
+    });
+  });
+
+  // Close table context menu on outside click
+  document.addEventListener('click', (e) => {
+    if (!elements.tableContextMenu.contains(e.target)) {
+      hideTableContextMenu();
+    }
   });
 
   // New note button
@@ -641,7 +937,6 @@ function setupKeyboardShortcuts() {
     // Emoji picker navigation
     if (elements.emojiPicker.classList.contains('visible')) {
       const cols = 8;
-      const rows = Math.ceil(filteredEmojis.length / cols);
 
       switch (e.key) {
         case 'ArrowRight':

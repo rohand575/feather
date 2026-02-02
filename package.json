@@ -12,9 +12,11 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "^28.1.0",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "png-to-ico": "^3.0.1"
   },
   "dependencies": {
+    "auto-launch": "^5.0.6",
     "uuid": "^9.0.1"
   },
   "build": {
@@ -32,7 +34,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.ico"

@@ -17,19 +17,21 @@ win:
     - target: nsis
       arch:
         - x64
-  icon: build/icon.ico
   artifactName: ${productName}-Setup-${version}.${ext}
+  signAndEditExecutable: false
+  sign: false
 
 nsis:
   oneClick: false
+  perMachine: false
   allowToChangeInstallationDirectory: true
-  installerIcon: build/icon.ico
-  uninstallerIcon: build/icon.ico
-  installerHeaderIcon: build/icon.ico
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Feather
   runAfterFinish: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
 
 mac:
   target:
@@ -37,14 +39,12 @@ mac:
       arch:
         - x64
         - arm64
-  icon: build/icon.icns
   category: public.app-category.productivity
 
 linux:
   target:
     - AppImage
     - deb
-  icon: build/icons
   category: Utility
 
 # Rebuild native modules for Electron

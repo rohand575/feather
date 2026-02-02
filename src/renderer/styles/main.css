@@ -487,13 +487,15 @@ body {
   border: none;
   outline: none;
   resize: none;
-  font-family: 'Georgia', serif;
-  font-size: 18px;
-  line-height: 1.8;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
   color: var(--text-primary);
   caret-color: var(--accent);
   overflow-y: auto;
   min-height: 200px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 /* Paper texture background for editor container */
@@ -532,6 +534,17 @@ body {
   content: 'Start writing...';
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* First line styling - centered and bold */
+.editor > *:first-child,
+.editor > br:first-child + *,
+.editor > .first-line-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.4em;
+  margin-bottom: 0.5em;
+  color: var(--text-primary);
 }
 
 /* Editor formatting styles */
@@ -593,6 +606,43 @@ body {
 .editor s, .editor strike {
   text-decoration: line-through;
   color: var(--text-tertiary);
+}
+
+.editor a, .editor .note-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.editor a:hover, .editor .note-link:hover {
+  color: var(--accent-hover);
+  border-bottom-color: var(--accent-hover);
+}
+
+.editor table, .editor .note-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  font-size: 14px;
+}
+
+.editor table td, .editor .note-table td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  min-width: 60px;
+  vertical-align: top;
+}
+
+.editor table td:focus, .editor .note-table td:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.editor table tr:first-child td {
+  background: var(--bg-tertiary);
+  font-weight: 500;
 }
 
 .editor::-webkit-scrollbar {
@@ -1005,6 +1055,61 @@ body {
   font-size: 13px;
   color: var(--text-primary);
   white-space: nowrap;
+}
+
+/* ===== Table Context Menu ===== */
+.table-context-menu {
+  position: fixed;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px var(--shadow);
+  padding: 6px;
+  z-index: 2500;
+  display: none;
+  min-width: 160px;
+}
+
+.table-context-menu.visible {
+  display: block;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition-fast);
+}
+
+.context-menu-item:hover {
+  background: var(--bg-hover);
+}
+
+.context-menu-item.danger {
+  color: var(--danger);
+}
+
+.context-menu-item.danger:hover {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.context-menu-item svg {
+  flex-shrink: 0;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
 }
 
 /* ===== Utility ===== */

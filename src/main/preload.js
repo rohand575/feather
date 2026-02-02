@@ -17,5 +17,8 @@ contextBridge.exposeInMainWorld('feather', {
   toggleFocusMode: (enabled) => ipcRenderer.send('window:toggleFocusMode', enabled),
 
   // Download note
-  downloadNote: (filename, content) => ipcRenderer.invoke('note:download', filename, content)
+  downloadNote: (filename, content) => ipcRenderer.invoke('note:download', filename, content),
+
+  // Open external URL in system default browser
+  openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)
 });
