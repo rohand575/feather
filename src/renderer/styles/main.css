@@ -537,14 +537,30 @@ body {
 }
 
 /* First line styling - centered and bold */
-.editor > *:first-child,
-.editor > br:first-child + *,
 .editor > .first-line-title {
   text-align: center;
   font-weight: 700;
   font-size: 1.4em;
   margin-bottom: 0.5em;
   color: var(--text-primary);
+}
+
+/* Non-title content should be left-aligned by default */
+.editor > *:not(.first-line-title) {
+  text-align: left;
+}
+
+/* Text alignment classes for editor content */
+.editor .align-left {
+  text-align: left !important;
+}
+
+.editor .align-center {
+  text-align: center !important;
+}
+
+.editor .align-right {
+  text-align: right !important;
 }
 
 /* Editor formatting styles */

@@ -619,6 +619,18 @@ function applyFormat(format) {
       document.execCommand('insertHTML', false, tableHtml);
       break;
 
+    case 'alignLeft':
+      document.execCommand('justifyLeft', false, null);
+      break;
+
+    case 'alignCenter':
+      document.execCommand('justifyCenter', false, null);
+      break;
+
+    case 'alignRight':
+      document.execCommand('justifyRight', false, null);
+      break;
+
     default:
       return;
   }
@@ -999,6 +1011,12 @@ function setupKeyboardShortcuts() {
     if (isCtrl && !isAlt && e.key === 'i') {
       e.preventDefault();
       applyFormat('italic');
+    }
+
+    // Ctrl + L: Bullet list
+    if (isCtrl && !isAlt && e.key === 'l') {
+      e.preventDefault();
+      applyFormat('bullet');
     }
 
     // Ctrl + Alt + F: Focus mode
